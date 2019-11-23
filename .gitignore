@@ -1,0 +1,14 @@
+# Repo specific
+.DS_Store
+.idea
+*.sublime-*
+*.pt
+*.npy
+*.log
+*.out
+
+
+# Compiled
+__pycache__/
+
+/data/
