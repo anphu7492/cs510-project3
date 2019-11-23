@@ -98,7 +98,7 @@ valid_gen = CustomGenerator(X_valid, Y_valid, batch_size)
 test_gen = CustomGenerator(X_test, Y_test, batch_size)
 
 # Training the model
-save_dir = 'data/models/' + model_name
+save_dir = f'data/models/{model_name}/{prefix}'
 if not os.path.exists(save_dir):
     os.makedirs(save_dir)
 checkpoint_path = os.path.join(save_dir, 'model-{epoch:02d}-{val_loss:.5f}.hdf5')
