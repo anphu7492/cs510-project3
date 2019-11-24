@@ -56,11 +56,13 @@ class AttLayer(layers.Layer):
 
 
 class HAN(object):
-    def __init__(self, vocab_size, max_sent_length=200, max_sents=15, embedding_dim=100):
+    def __init__(self, vocab_size, max_sent_length=200, max_sents=15,
+                 embedding_dim=100, num_class=1):
         self.vocab_size = vocab_size
         self.max_sent_length = max_sent_length
         self.max_sentences = max_sents
         self.embedding_dim = embedding_dim
+        self.num_class = num_class
 
     def get_model(self):
         embedding_layer = Embedding(self.vocab_size,
@@ -72,7 +74,7 @@ class HAN(object):
         sentence_input = Input(shape=(self.max_sent_length,), dtype='int64')
         embedded_sequences = embedding_layer(sentence_input)
         l_lstm = Bidirectional(GRU(100, return_sequences=True))(embedded_sequences)
-        l_att = AttLayer(100)(l_lstm)
+        l_att = AttLayer(64)(l_lstm)
         # l_att = l_lstm
         sentEncoder = Model(sentence_input, l_att)
 
@@ -89,9 +91,9 @@ class HAN(object):
         l_lstm_sent = Bidirectional(gru)(review_encoder)
         # l_lstm_sent = Bidirectional(GRU(300, return_sequences=True))(review_encoder)
         print("l_lstm_sent", l_lstm_sent.shape)
-        l_att_sent = AttLayer(100)(l_lstm_sent)
+        l_att_sent = AttLayer(64)(l_lstm_sent)
         print("l_att_sent", l_att_sent.shape)
-        preds = Dense(2, activation='softmax')(l_att_sent)
+        preds = Dense(self.num_class, activation='sigmoid')(l_att_sent)
         model = Model(review_input, preds)
 
         return model
