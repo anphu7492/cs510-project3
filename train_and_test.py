@@ -1,15 +1,12 @@
 import os
 import sys
 import pickle
-import pandas as pd
 import numpy as np
 import tensorflow_datasets as tfds
 import tensorflow as tf
-from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.callbacks import ModelCheckpoint
 from tensorflow.keras.utils import Sequence
 from sklearn.metrics import roc_curve, auc
-from tensorflow.keras.utils import to_categorical
 from datetime import datetime
 
 from models.HAN import HAN
@@ -19,8 +16,8 @@ import matplotlib.pyplot as plt
 now = datetime.now()
 
 prefix = sys.argv[1] if len(sys.argv) > 1 else now.strftime("%m%d%y_%H")
-model_name = "HAN"
-data_suffix = "HAN"
+model_name = "baseline"
+data_suffix = "lstm"
 print("prefix:", prefix)
 
 with open(f'data/y_train_{data_suffix}.pickle', 'rb') as handle:
@@ -41,7 +38,7 @@ with open(f'data/vocab_set_{data_suffix}.pickle', 'rb') as handle:
 
 N_TRAIN = 50000
 N_TEST = 25000
-N_VALID = 250000
+N_VALID = 25000
 
 X_train = X_train[:N_TRAIN]
 Y_train = Y_train[:N_TRAIN]
@@ -61,9 +58,9 @@ print(f'Vocab size: {encoder.vocab_size}')
 
 # Model Definition
 if model_name == "HAN":
-    model = HAN(encoder.vocab_size, max_sents=3, max_sent_length=200, embedding_dim=64).get_model()
+    model = HAN(feature_size=encoder.vocab_size, max_sents=3, max_sent_length=200, embedding_dim=64).get_model()
 elif model_name == "TextAttBiRNN":
-    model = TextAttBiRNN(maxlen=1000, max_features=encoder.vocab_size, embedding_dims=64).get_model()
+    model = TextAttBiRNN(maxlen=1000, feature_size=encoder.vocab_size, embedding_dims=64).get_model()
 elif model_name == "baseline":
     model = tf.keras.Sequential([
         tf.keras.layers.Embedding(encoder.vocab_size, 64),
@@ -125,7 +122,6 @@ his1 = model.fit_generator(
 predictions = model.predict_generator(test_gen, verbose=1)
 pred_indices = tf.math.argmax(predictions, 1)
 
-# fpr, tpr, _ = roc_curve(Y_test_orig, predictions[:, 1])
 fpr, tpr, _ = roc_curve(Y_test, predictions)
 roc_auc = auc(fpr, tpr)
 print('AUC: ', roc_auc)

@@ -109,22 +109,39 @@ class Attention(Layer):
 
 
 class TextAttBiRNN(object):
-    def __init__(self, maxlen, max_features, embedding_dims,
+    def __init__(self, maxlen, feature_size, embedding_dims,
                  class_num=1,
                  last_activation='sigmoid'):
         self.maxlen = maxlen
-        self.max_features = max_features
+        self.feature_size = feature_size
         self.embedding_dims = embedding_dims
         self.class_num = class_num
         self.last_activation = last_activation
 
-    def get_model(self):
+    def get_model_old(self):
         input = Input((self.maxlen,))
 
-        embedding = Embedding(self.max_features, self.embedding_dims, input_length=self.maxlen)(input)
-        x = Bidirectional(LSTM(128, return_sequences=True))(embedding)  # LSTM or GRU
+        embedding = Embedding(self.feature_size, self.embedding_dims, input_length=self.maxlen)(input)
+        x = Bidirectional(GRU(128, return_sequences=True))(embedding)  # LSTM or GRU
         x = Attention(self.maxlen)(x)
 
+        output = Dense(self.class_num, activation=self.last_activation)(x)
+        model = Model(inputs=input, outputs=output)
+        return model
+
+    def get_model(self):
+        input = Input((self.maxlen,))
+        embedding = Embedding(self.feature_size,
+                              self.embedding_dims,
+                              input_length=self.maxlen)(input)
+        x = Bidirectional(GRU(64, return_sequences=True))(embedding)
+        print('x shape:', x.shape)
+        # x = Attention(self.maxlen)(x)
+        # print('x shape:', x.shape)
+        x = Bidirectional(GRU(32, return_sequences=True))(x)
+        x = Attention(self.maxlen)(x)
+        x = Dense(64, activation='relu')(x)
+        x = Dropout(0.5)(x)
         output = Dense(self.class_num, activation=self.last_activation)(x)
         model = Model(inputs=input, outputs=output)
         return model

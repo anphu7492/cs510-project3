@@ -56,16 +56,16 @@ class AttLayer(layers.Layer):
 
 
 class HAN(object):
-    def __init__(self, vocab_size, max_sent_length=200, max_sents=15,
+    def __init__(self, feature_size=500, max_sent_length=200, max_sents=15,
                  embedding_dim=100, num_class=1):
-        self.vocab_size = vocab_size
+        self.feature_size = feature_size
         self.max_sent_length = max_sent_length
         self.max_sentences = max_sents
         self.embedding_dim = embedding_dim
         self.num_class = num_class
 
     def get_model(self):
-        embedding_layer = Embedding(self.vocab_size,
+        embedding_layer = Embedding(self.feature_size,
                                     self.embedding_dim)
                                     # weights=[embedding_matrix],
                                     # input_length=self.max_sent_length,
