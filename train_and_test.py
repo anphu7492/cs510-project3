@@ -1,6 +1,7 @@
 import os
 import sys
 import pickle
+import argparse
 import numpy as np
 import tensorflow_datasets as tfds
 import tensorflow as tf
@@ -15,10 +16,20 @@ import matplotlib.pyplot as plt
 
 now = datetime.now()
 
-prefix = sys.argv[1] if len(sys.argv) > 1 else now.strftime("%m%d%y_%H")
-model_name = "baseline"
-data_suffix = "lstm"
-print("prefix:", prefix)
+suffix = now.strftime("%H%M%d")
+parser = argparse.ArgumentParser(
+        description='Training options',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+parser.add_argument('--model', required=True, type=str,
+                    help='Name of the DNN model to train')
+
+parser.add_argument('--save_dir', required=True, type=str,
+                    help='Enter path to the save model checkpoint')
+
+options = parser.parse_args()
+
+data_suffix = "HAN" if options.model == "HAN" else "lstm"
 
 with open(f'data/y_train_{data_suffix}.pickle', 'rb') as handle:
     Y_train = pickle.load(handle)
@@ -40,28 +51,36 @@ N_TRAIN = 50000
 N_TEST = 25000
 N_VALID = 25000
 
+Y_train = np.array(Y_train)
+Y_test = np.array(Y_test)
+Y_valid = np.array(Y_valid)
+
 X_train = X_train[:N_TRAIN]
 Y_train = Y_train[:N_TRAIN]
 X_test = X_test[:N_TEST]
 Y_test = Y_test[:N_TEST]
 X_valid = X_valid[:N_VALID]
 Y_valid = Y_valid[:N_VALID]
-# Y_valid = to_categorical(Y_valid)
 
 print("X_train shape:", X_train.shape)
-print("Y_train shape:", len(Y_train))
-print("Y_test length:", len(Y_test))
+print("X_test shape:", X_test.shape)
+print("X_valid shape:", X_valid.shape)
+
+print("-----------Data stats:----------")
+print("Train buggy rate: {:.2f} %".format(np.sum(Y_test) * 100 / len(Y_test)))
+print("Test buggy rate: {:.2f} %".format(np.sum(Y_test) * 100 / len(Y_test)))
+print("Validation buggy rate: {:.2f} %".format(np.sum(Y_valid) * 100 / len(Y_test)))
 # Encode training, valid and test instances
 encoder = tfds.features.text.TokenTextEncoder(vocabulary_set)
 
 print(f'Vocab size: {encoder.vocab_size}')
 
 # Model Definition
-if model_name == "HAN":
+if options.model == "HAN":
     model = HAN(feature_size=encoder.vocab_size, max_sents=3, max_sent_length=200, embedding_dim=64).get_model()
-elif model_name == "TextAttBiRNN":
+elif options.model == "TextAttBiRNN":
     model = TextAttBiRNN(maxlen=1000, feature_size=encoder.vocab_size, embedding_dims=64).get_model()
-elif model_name == "baseline":
+elif options.model == "baseline":
     model = tf.keras.Sequential([
         tf.keras.layers.Embedding(encoder.vocab_size, 64),
         tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(64,  return_sequences=True)),
@@ -102,10 +121,10 @@ valid_gen = CustomGenerator(X_valid, Y_valid, batch_size)
 test_gen = CustomGenerator(X_test, Y_test, batch_size)
 
 # Training the model
-save_dir = f'data/models/{model_name}/{prefix}'
-if not os.path.exists(save_dir):
-    os.makedirs(save_dir)
-checkpoint_path = os.path.join(save_dir, 'model-{epoch:02d}-{val_loss:.5f}.hdf5')
+dir_path = f'output/{options.save_dir}_{suffix}'
+if not os.path.exists(dir_path):
+    os.makedirs(dir_path)
+checkpoint_path = os.path.join(dir_path, 'model-{epoch:02d}-{val_loss:.5f}.hdf5')
 checkpointer = ModelCheckpoint(checkpoint_path,
                                monitor='val_loss',
                                verbose=1,
@@ -115,7 +134,7 @@ checkpointer = ModelCheckpoint(checkpoint_path,
 callback_list = [checkpointer]  # , , reduce_lr
 his1 = model.fit_generator(
     generator=train_gen,
-    epochs=5,
+    epochs=1,
     validation_data=valid_gen,
     callbacks=callback_list)
 
@@ -137,4 +156,4 @@ plt.ylabel('True Positive Rate')
 plt.title('Receiver operating characteristic example')
 plt.legend(loc="lower right")
 
-plt.savefig(f'{prefix}_auc_model_{model_name}.png')
+plt.savefig(f'{dir_path}/auc_model_{options.model}.png')
