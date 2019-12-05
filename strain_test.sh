@@ -1,18 +1,19 @@
 #!/bin/bash
 
 #SBATCH -J train
+#SBATCH --account=project_2001284
 #SBATCH --mem-per-cpu 50000
-#SBATCH --gres=gpu:v100:1
+#SBATCH --gres=gpu:v100:2
 #SBATCH -p gpu
-#SBATCH -t 3:00:00
-##SBATCH --begin=02:00
+#SBATCH -t 7:00:00
 
-source /appl/soft/ai/miniconda3/etc/profile.d/conda.sh
+# module load cuda/10.1.168 ???
 source activate tensorflow2.0
 
 echo "Start training..."
-
-python -u train_and_test.py --model TextAttBiRNN \
-                            --save_dir att-birnn
+# baseline, TextAttBiRNN, HAN
+python -u train_and_test.py --model Regularized \
+                            --save_dir Regularized-clean-1M-es \
+                            --data_path data/baseline_1M
 
 echo "Training done..."

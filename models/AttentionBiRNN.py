@@ -6,8 +6,8 @@ from tensorflow.compat.v1.keras.layers import CuDNNLSTM
 
 class Attention(Layer):
     def __init__(self, step_dim,
-                 W_regularizer=None, b_regularizer=None,
-                 W_constraint=None, b_constraint=None,
+                 W_regularizer=None, b_regularizer=None, u_regularizer=None,
+                 W_constraint=None, b_constraint=None, u_constraint=None,
                  bias=True, **kwargs):
         """
         Keras Layer that implements an Attention mechanism for temporal data.
@@ -34,9 +34,11 @@ class Attention(Layer):
         self.init = initializers.get('glorot_uniform')
 
         self.W_regularizer = regularizers.get(W_regularizer)
+        self.u_regularizer = regularizers.get(u_regularizer)
         self.b_regularizer = regularizers.get(b_regularizer)
 
         self.W_constraint = constraints.get(W_constraint)
+        self.u_constraint = constraints.get(u_constraint)
         self.b_constraint = constraints.get(b_constraint)
 
         self.bias = bias
@@ -64,7 +66,13 @@ class Attention(Layer):
         else:
             self.b = None
 
-        self.built = True
+        self.u = self.add_weight(name='{}_u'.format(self.name),
+                                 shape=(input_shape[-1],),
+                                 initializer=self.init,
+                                 regularizer=self.u_regularizer,
+                                 constraint=self.u_constraint)
+        # self.built = True
+        super(Attention, self).build(input_shape)
 
     def compute_mask(self, input, input_mask=None):
         # do not pass the mask to the next layers
@@ -100,8 +108,10 @@ class Attention(Layer):
         config.update({
             'step_dim': self.step_dim,
             'W_regularizer': self.W_regularizer,
+            'u_regularizer': self.u_regularizer,
             'b_regularizer': self.b_regularizer,
             'W_constraint': self.W_constraint,
+            'u_constraint': self.u_constraint,
             'b_constraint': self.b_constraint,
             'bias': self.bias,
         })
@@ -118,27 +128,23 @@ class TextAttBiRNN(object):
         self.class_num = class_num
         self.last_activation = last_activation
 
-    def get_model_old(self):
+    def get_model(self):
         input = Input((self.maxlen,))
 
         embedding = Embedding(self.feature_size, self.embedding_dims, input_length=self.maxlen)(input)
         x = Bidirectional(GRU(128, return_sequences=True))(embedding)  # LSTM or GRU
         x = Attention(self.maxlen)(x)
-
+        x = Dropout(0.5)(x)
         output = Dense(self.class_num, activation=self.last_activation)(x)
         model = Model(inputs=input, outputs=output)
         return model
 
-    def get_model(self):
+    def get_model_2(self):
         input = Input((self.maxlen,))
         embedding = Embedding(self.feature_size,
                               self.embedding_dims,
                               input_length=self.maxlen)(input)
-        x = Bidirectional(GRU(64, return_sequences=True))(embedding)
-        print('x shape:', x.shape)
-        # x = Attention(self.maxlen)(x)
-        # print('x shape:', x.shape)
-        x = Bidirectional(GRU(32, return_sequences=True))(x)
+        x = Bidirectional(CuDNNLSTM(64, return_sequences=True))(embedding)
         x = Attention(self.maxlen)(x)
         x = Dense(64, activation='relu')(x)
         x = Dropout(0.5)(x)

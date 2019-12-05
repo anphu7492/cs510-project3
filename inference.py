@@ -30,24 +30,6 @@ def compute_AUC(Y_test, predictions, options):
     plt.savefig(f'test_auc_model_{options.model}.png')
 
 
-# Building generators
-class CustomGenerator(Sequence):
-    def __init__(self, text, labels, batch_size, num_steps=None):
-        self.text, self.labels = text, labels
-        self.batch_size = batch_size
-        self.len = np.ceil(len(self.text) / float(self.batch_size)).astype(np.int64)
-        if num_steps:
-            self.len = min(num_steps, self.len)
-
-    def __len__(self):
-        return self.len
-
-    def __getitem__(self, idx):
-        batch_x = self.text[idx * self.batch_size:(idx + 1) * self.batch_size]
-        batch_y = self.labels[idx * self.batch_size:(idx + 1) * self.batch_size]
-        return batch_x, batch_y
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='Testing options',
@@ -91,7 +73,6 @@ if __name__ == "__main__":
     model.load_weights(options.checkpoint)
 
     batch_size = 16
-    test_gen = CustomGenerator(X_test, Y_test, batch_size)
     loss, accuracy = model.evaluate(X_test, Y_test, verbose=2)
 
     print("Restored model, accuracy: {:5.2f}%".format(100 * accuracy))
