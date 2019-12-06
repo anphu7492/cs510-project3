@@ -1,4 +1,3 @@
-import pandas as pd
 import pickle
 import re
 import javalang
@@ -123,8 +122,6 @@ print("=========================Remove based on z-score==================")
 
 # https://people.richland.edu/james/lecture/m170/ch08-int.html
 train = train[(np.abs(stats.zscore(train[["context_before_length", "instance_length", "context_after_length"]])) < 2.3).all(axis=1)]
-# train = train[(np.abs(stats.zscore(train["instance_length"])) < 3)]
-# train = train[(np.abs(stats.zscore(train["context_after_length"])) < 3)]
 
 print(train["context_before_length"].describe())
 print(train["instance_length"].describe())
