@@ -30,6 +30,8 @@ parser.add_argument('--data_path', required=True, type=str,
                     help='Path to load tokenized data')
 parser.add_argument('--save_dir', required=True, type=str,
                     help='Enter path to the save model checkpoint')
+parser.add_argument('--train_from', required=False, type=str,
+                    help='Enter path to load pretrained weights')
 
 options = parser.parse_args()
 
@@ -57,6 +59,7 @@ Y_test = tf.constant(Y_test)
 X_valid = tf.constant(X_valid)
 Y_valid = tf.constant(Y_valid)
 
+
 N_TRAIN = 1000000
 N_TEST = 49000
 N_VALID = 49000
@@ -67,6 +70,7 @@ X_test = X_test[:N_TEST]
 Y_test = Y_test[:N_TEST]
 X_valid = X_valid[:N_VALID]
 Y_valid = Y_valid[:N_VALID]
+
 
 print("train shape:", X_train.shape, Y_train.shape)
 print("X_test shape:", X_test.shape, Y_test.shape)
@@ -95,7 +99,9 @@ with strategy.scope():
     elif options.model == "Regularized":
         model = tf.keras.Sequential([
             tf.keras.layers.Embedding(encoder.vocab_size, 64),
-            tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(64)),
+            tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(128, return_sequences=True)),
+            tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(64, return_sequences=True)),
+            tf.keras.layers.Bidirectional(tf.keras.layers.LSTM(32)),
             tf.keras.layers.Dense(64, kernel_regularizer=tf.keras.regularizers.l2(0.001), activation='relu'),
             tf.keras.layers.Dropout(0.5),
             tf.keras.layers.Dense(64, kernel_regularizer=tf.keras.regularizers.l2(0.001), activation='relu'),
@@ -119,6 +125,9 @@ with strategy.scope():
     model.compile(loss='binary_crossentropy',
                   optimizer=tf.keras.optimizers.Adam(learning_rate),
                   metrics=METRICS)
+
+if options.train_from is not None:
+    model.load_weights(options.train_from)
 
 model.summary()
 batch_size = 512
@@ -174,6 +183,7 @@ callback_list = [checkpointer, early_stopping]  # , , reduce_lr
 
 history = model.fit(X_train, Y_train,
                     batch_size=batch_size,
+                    shuffle=True,
                     epochs=20,
                     validation_data=(X_valid, Y_valid),
                     callbacks=callback_list)

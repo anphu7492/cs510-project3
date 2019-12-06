@@ -16,11 +16,6 @@ with open('data/valid.pickle', 'rb') as handle:
 with open('data/test.pickle', 'rb') as handle:
     test = pickle.load(handle)
 
-# TODO> remove
-# train = train[:1000]
-# test = test[:500]
-# valid = valid[:500]
-
 # drop duplicate
 print('# samples before dropping duplicated (train, test, val):', len(train.index), len(test.index), len(valid.index))
 train = train.drop_duplicates(subset=["instance", "context_before", "context_after"])
